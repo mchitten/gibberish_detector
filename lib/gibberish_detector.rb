@@ -6,14 +6,14 @@ class GibberishDetectorException < Exception ; end
 
 class GibberishDetector
   ACCEPTED_CHARACTERS = 'abcdefghijklmnopqrstuvwxyz ';
-  DATA_FILE = '.trained_data.yml'
+  DATA_FILE = File.join(File.dirname(__FILE__), '..', '.trained_data.yml')
 
   class << self
     def gibberish?(text, opts = {})
       opts[:lib_path] ||= DATA_FILE
       opts[:raw] ||= false
 
-      raise GibberishDetectorException, 'Please run Gibberish.train! to build your trained data file.' unless File.exist?(opts[:lib_path])
+      raise GibberishDetectorException, "Please run Gibberish.train! to build your trained data file." unless File.exist?(opts[:lib_path])
 
       trained_library = YAML.load(File.open(opts[:lib_path]))
       raise GibberishDetectorException, 'Please run Gibberish.train! to build your trained data file.' if trained_library.nil?
@@ -26,9 +26,14 @@ class GibberishDetector
       false
     end
 
-    def train!(big_text_file = 'big.txt', good_text_file = 'good.txt', bad_text_file = 'bad.txt', lib_path = DATA_FILE)
-      if File.exist?(big_text_file) == false || File.exist?(good_text_file) == false || File.exist?(bad_text_file) == false
-        raise GibberishDetectorException, "We couldn't find one of #{big_text_file}, #{good_text_file} or #{bad_text_file}.  Please ensure all three files exist before training."
+    def train!(opts={})
+      opts[:big_text_file] = 'big.txt'
+      opts[:good_text_file] = 'good.txt'
+      opts[:bad_text_file] = 'bad.txt'
+      opts[:lib_path] = DATA_FILE
+
+      if File.exist?(opts[:big_text_file]) == false || File.exist?(opts[:good_text_file]) == false || File.exist?(opts[:bad_text_file]) == false
+        raise GibberishDetectorException, "We couldn't find one of #{opts[:big_text_file]}, #{opts[:good_text_file]} or #{opts[:bad_text_file]}.  Please ensure all three files exist before training."
         return false
       end
 
@@ -50,7 +55,7 @@ class GibberishDetector
         log_prob_matrix[index] = arr
       end
 
-      lines = File.open(big_text_file).read
+      lines = File.open(opts[:big_text_file]).read
       lines.each_line do |line|
         filtered_line = normalize(line).split('')
         a = false
@@ -71,13 +76,13 @@ class GibberishDetector
         end
       end
 
-      good_lines = File.open(good_text_file).read
+      good_lines = File.open(opts[:good_text_file]).read
       good_probs = []
       good_lines.each_line do |line|
         good_probs << _averageTransitionProbability(line.chomp, log_prob_matrix)
       end
 
-      bad_lines = File.open(bad_text_file).read
+      bad_lines = File.open(opts[:bad_text_file]).read
       bad_probs = []
       bad_lines.each_line do |line|
         bad_probs << _averageTransitionProbability(line.chomp, log_prob_matrix)
@@ -91,7 +96,7 @@ class GibberishDetector
       end
 
       threshold = (min_good_probs + max_bad_probs) / 2
-      File.open(lib_path, 'w+') do |file|
+      File.open(opts[:lib_path], 'w+') do |file|
         data = {
           :matrix => log_prob_matrix,
           :threshold => threshold
