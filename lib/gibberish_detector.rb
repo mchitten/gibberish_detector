@@ -26,7 +26,7 @@ class GibberishDetector
       false
     end
 
-    def train!(opts={})
+    def train(opts={})
       opts[:big_text_file] = 'big.txt'
       opts[:good_text_file] = 'good.txt'
       opts[:bad_text_file] = 'bad.txt'
